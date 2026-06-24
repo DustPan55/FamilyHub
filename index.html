@@ -82,6 +82,9 @@
   .nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:16px;color:var(--muted);font-weight:800;font-size:11px}
   .nav button .ic{font-size:22px}
   .nav button.active{background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff}
+  .nav button{position:relative}
+  .navdot{position:absolute;top:2px;right:12px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.5)}
+  .pendingtag{background:#fef3c7;color:#b45309;font-weight:800;font-size:12px;padding:2px 8px;border-radius:999px}
 
   .viewtitle{font-family:'Baloo 2';font-size:26px;font-weight:800;margin:2px 4px 12px}
 
@@ -176,6 +179,10 @@
   .mood-pick{display:flex;gap:8px;flex-wrap:wrap}
   .mood-pick button{font-size:28px;width:48px;height:48px;border-radius:14px;background:#faf8ff;border:2px solid transparent}
   .mood-pick button.sel{border-color:var(--purple);background:#f1edff;transform:scale(1.05)}
+  .jentry .jphoto{width:56px;height:56px;border-radius:14px;object-fit:cover;flex:none}
+  .jphoto-big{width:100%;border-radius:16px;max-height:260px;object-fit:cover;margin-bottom:10px;display:block}
+  .cal-day .cmood{font-size:19px;line-height:1;margin-top:1px}
+  .jstreak{display:flex;align-items:center;gap:6px;background:#fff;border-radius:999px;padding:6px 12px;box-shadow:var(--shadow);font-weight:800;font-size:13px}
 </style>
 </head>
 <body>
@@ -245,7 +252,7 @@
     <button data-view="Today" class="active"><span class="ic">🏠</span>Today</button>
     <button data-view="Lists"><span class="ic">✅</span>Lists</button>
     <button data-view="Calendar"><span class="ic">📅</span>Calendar</button>
-    <button data-view="Chores"><span class="ic">⭐</span>Chores</button>
+    <button data-view="Chores"><span class="ic">⭐</span>Chores<span class="navdot hidden" id="choreBadge"></span></button>
     <button data-view="Journal"><span class="ic">📔</span>Journal</button>
   </div>
 </div>
@@ -544,6 +551,7 @@ function renderView(){
   if(S.view==="Chores"){$("viewChores").classList.remove("hidden");renderChores();}
   if(S.view==="Journal"){$("viewJournal").classList.remove("hidden");renderJournal();}
   if(S.view==="Settings"){$("viewSettings").classList.remove("hidden");renderSettings();}
+  refreshChoreBadge();
 }
 
 /* ===================== TASK ROW ===================== */
@@ -555,6 +563,7 @@ function taskRow(t,opts={}){
   if(t.due_time)meta.push(`🕐 ${pretty12(t.due_time)}`);
   if(opts.showWho&&p)meta.push(`${p.avatar} ${esc(p.name)}`);
   if(t.recurrence)meta.push(`🔁 ${t.recurrence}`);
+  if(t.is_chore&&t.done&&!t.approved)meta.push(`⏳ waiting for approval`);
   r.innerHTML=`
     <div class="check ${t.done?'on':''}">${t.done?'✓':''}</div>
     <div class="body"><div class="ttl">${esc(t.title)}</div>
@@ -568,33 +577,58 @@ function taskRow(t,opts={}){
 
 async function toggleTask(t){
   const now=!t.done;
-  const isChildChore = t.is_chore && t.points>0 && t.assigned_to;
-  // optimistic
+  if(t.is_chore){
+    if(now){
+      // completing a chore: parents auto-approve, kids send for approval
+      t.done=true; t.done_at=new Date().toISOString(); t.approved=!!S.isAuthParent;
+      renderView();
+      await sb.from('fam_tasks').update({done:true,done_at:t.done_at,approved:t.approved}).eq('id',t.id);
+      if(t.approved){ await awardChore(t,true); confetti(); await spawnNext(t); toast(t.points?`+${t.points}⭐ Approved!`:"Done!"); }
+      else { confetti(); toast("Sent to a parent for approval ⏳"); }
+    } else {
+      // un-completing
+      const wasApproved=t.approved;
+      t.done=false; t.done_at=null; t.approved=false;
+      renderView();
+      await sb.from('fam_tasks').update({done:false,done_at:null,approved:false}).eq('id',t.id);
+      if(wasApproved) await awardChore(t,false);
+    }
+    renderView();
+    return;
+  }
+  // plain to-do
   t.done=now; t.done_at=now?new Date().toISOString():null;
   renderView();
   await sb.from('fam_tasks').update({done:now,done_at:t.done_at}).eq('id',t.id);
-
-  if(isChildChore){
-    const prof=profById(t.assigned_to);
-    if(prof){
-      prof.points=Math.max(0,(prof.points||0)+(now?t.points:-t.points));
-      await sb.from('fam_profiles').update({points:prof.points}).eq('id',prof.id);
-      if(S.me && S.me.id===prof.id)$("scorePts").textContent=prof.points;
-    }
-  }
-  if(now){
-    confetti();
-    if(isChildChore)toast(`+${t.points}⭐ Nice work!`);
-    // spawn next occurrence for recurring chores
-    if(t.recurrence && t.due_date){
-      const next=addDays(t.due_date,t.recurrence==='weekly'?7:1);
-      const copy={list_id:t.list_id,title:t.title,notes:t.notes,due_date:next,due_time:t.due_time,
-        is_chore:t.is_chore,assigned_to:t.assigned_to,points:t.points,recurrence:t.recurrence,created_by:t.created_by,sort:t.sort};
-      const {data}=await sb.from('fam_tasks').insert(copy).select();
-      if(data&&data[0])S.tasks.push(data[0]);
-    }
-  }
+  if(now)confetti();
   renderView();
+}
+
+async function awardChore(t,add){
+  if(!(t.points>0 && t.assigned_to))return;
+  const prof=profById(t.assigned_to); if(!prof)return;
+  prof.points=Math.max(0,(prof.points||0)+(add?t.points:-t.points));
+  await sb.from('fam_profiles').update({points:prof.points}).eq('id',prof.id);
+  if(S.me && S.me.id===prof.id)$("scorePts").textContent=prof.points;
+}
+async function spawnNext(t){
+  if(!(t.recurrence && t.due_date))return;
+  const next=addDays(t.due_date, t.recurrence==='weekly'?7:1);
+  const copy={list_id:t.list_id,title:t.title,notes:t.notes,due_date:next,due_time:t.due_time,
+    is_chore:t.is_chore,assigned_to:t.assigned_to,points:t.points,recurrence:t.recurrence,created_by:t.created_by,sort:t.sort};
+  const {data}=await sb.from('fam_tasks').insert(copy).select();
+  if(data && data[0])S.tasks.push(data[0]);
+}
+async function approveChore(t){
+  t.approved=true; renderView();
+  await sb.from('fam_tasks').update({approved:true}).eq('id',t.id);
+  await awardChore(t,true); confetti(); await spawnNext(t);
+  toast(t.points?`Approved! +${t.points}⭐`:"Approved!"); renderView();
+}
+async function sendBack(t){
+  t.done=false; t.done_at=null; t.approved=false; renderView();
+  await sb.from('fam_tasks').update({done:false,done_at:null,approved:false}).eq('id',t.id);
+  toast("Sent back to do ↩️"); renderView();
 }
 async function deleteTask(t){
   if(!confirm(`Delete "${t.title}"?`))return;
@@ -654,7 +688,7 @@ function renderToday(){
 function greeting(){const h=new Date().getHours();return h<12?"Good morning,":h<18?"Hi there,":"Good evening,";}
 
 function calcStreak(profileId){
-  const days=new Set(S.tasks.filter(x=>x.is_chore&&x.assigned_to===profileId&&x.done&&x.done_at)
+  const days=new Set(S.tasks.filter(x=>x.is_chore&&x.assigned_to===profileId&&x.approved&&x.done_at)
                 .map(x=>x.done_at.slice(0,10)));
   let streak=0,cur=todayStr();
   if(!days.has(cur))cur=addDays(cur,-1); // allow today not done yet
@@ -787,6 +821,31 @@ function eventRow(e,canDelete){
 }
 
 /* ===================== CHORES ===================== */
+function pendingRow(t){
+  const k=profById(t.assigned_to);
+  const r=el(`<div class="task" style="align-items:flex-start"></div>`);
+  const bits=[];
+  if(k)bits.push(`${k.avatar} ${esc(k.name)}`);
+  if(t.points)bits.push(`+${t.points}⭐`);
+  if(t.due_date)bits.push(prettyDate(t.due_date));
+  r.innerHTML=`
+    <div style="flex:1;min-width:0">
+      <div class="ttl">${esc(t.title)}</div>
+      <div class="meta">${bits.join(' · ')}</div>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <button class="btn small" data-ok>✓ Approve</button>
+        <button class="btn small secondary" data-no>↩️ Send back</button>
+      </div>
+    </div>`;
+  r.querySelector('[data-ok]').onclick=()=>approveChore(t);
+  r.querySelector('[data-no]').onclick=()=>sendBack(t);
+  return r;
+}
+function refreshChoreBadge(){
+  const b=$("choreBadge"); if(!b)return;
+  const n=S.isAuthParent?S.tasks.filter(t=>t.is_chore&&t.done&&!t.approved).length:0;
+  if(n>0){b.textContent=n;b.classList.remove('hidden');}else b.classList.add('hidden');
+}
 function renderChores(){
   const v=$("viewChores"); v.innerHTML="";
   v.appendChild(el(`<div class="viewtitle">Chores ⭐</div>`));
@@ -796,10 +855,23 @@ function renderChores(){
     const add=el(`<button class="btn" style="margin-bottom:14px">➕ Assign a chore</button>`);
     add.onclick=()=>openTaskModal({is_chore:true,points:5,due_date:todayStr()});
     v.appendChild(add);
+
+    // approval queue
+    const pending=S.tasks.filter(t=>t.is_chore&&t.done&&!t.approved)
+      .sort((a,b)=>(b.done_at||'').localeCompare(a.done_at||''));
+    if(pending.length){
+      v.appendChild(el(`<div class="sectionhd">⏳ Waiting for your approval (${pending.length})</div>`));
+      const pc=el(`<div class="card"></div>`);
+      pending.forEach(t=>pc.appendChild(pendingRow(t)));
+      v.appendChild(pc);
+    }
+
     kids.forEach(k=>{
       v.appendChild(el(`<div class="sectionhd">${k.avatar} ${esc(k.name)} · ⭐ ${k.points||0} · 🔥 ${calcStreak(k.id)}</div>`));
       const card=el(`<div class="card"></div>`);
-      const ch=S.tasks.filter(t=>t.is_chore&&t.assigned_to===k.id).filter(t=>!t.done|| (t.done_at&&t.done_at.slice(0,10)===todayStr()));
+      // open + approved-today (pending shown above)
+      const ch=S.tasks.filter(t=>t.is_chore&&t.assigned_to===k.id)
+        .filter(t=> !t.done || (t.approved && t.done_at && t.done_at.slice(0,10)===todayStr()));
       if(!ch.length)card.appendChild(el(`<div class="empty" style="padding:18px"><div class="e" style="font-size:32px">🧹</div>No chores assigned</div>`));
       ch.forEach(t=>card.appendChild(taskRow(t,{canDelete:true})));
       v.appendChild(card);
