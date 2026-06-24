@@ -846,10 +846,57 @@ function refreshChoreBadge(){
   const n=S.isAuthParent?S.tasks.filter(t=>t.is_chore&&t.done&&!t.approved).length:0;
   if(n>0){b.textContent=n;b.classList.remove('hidden');}else b.classList.add('hidden');
 }
+async function undoChore(t){
+  if(!confirm("Undo this completed chore? Any points it gave will be removed."))return;
+  const wasApproved=t.approved;
+  t.done=false; t.done_at=null; t.approved=false; renderView();
+  await sb.from('fam_tasks').update({done:false,done_at:null,approved:false}).eq('id',t.id);
+  if(wasApproved) await awardChore(t,false);
+  toast("Chore reopened"); renderView();
+}
+function groupByDate(tasks){
+  const map={};
+  tasks.forEach(t=>{const d=(t.done_at||'').slice(0,10);(map[d]=map[d]||[]).push(t);});
+  return Object.keys(map).sort((a,b)=>b.localeCompare(a)).map(d=>({date:d,items:map[d]}));
+}
+function renderHistory(v,profileId,allowUndo){
+  const done=S.tasks.filter(t=>t.is_chore&&t.approved&&t.done_at&&(!profileId||t.assigned_to===profileId))
+    .sort((a,b)=>(b.done_at||'').localeCompare(a.done_at||''));
+  if(!done.length){v.appendChild(el(`<div class="empty"><div class="e">📜</div>No completed chores yet</div>`));return;}
+  groupByDate(done).forEach(g=>{
+    const pts=g.items.reduce((s,t)=>s+(t.points||0),0);
+    v.appendChild(el(`<div class="sectionhd">${prettyDate(g.date)} · ${g.items.length} done · +${pts}⭐</div>`));
+    const card=el(`<div class="card"></div>`);
+    g.items.forEach(t=>{
+      const k=profById(t.assigned_to);
+      const row=el(`<div class="task"></div>`);
+      const bits=[]; if(k)bits.push(`${k.avatar} ${esc(k.name)}`); if(t.points)bits.push(`+${t.points}⭐`);
+      row.innerHTML=`<div class="check on" style="cursor:default">✓</div>
+        <div class="body"><div class="ttl">${esc(t.title)}</div><div class="meta">${bits.join(' · ')}</div></div>
+        ${allowUndo?`<button class="del">↩️</button>`:''}`;
+      const u=row.querySelector('.del'); if(u)u.onclick=()=>undoChore(t);
+      card.appendChild(row);
+    });
+    v.appendChild(card);
+  });
+}
 function renderChores(){
   const v=$("viewChores"); v.innerHTML="";
   v.appendChild(el(`<div class="viewtitle">Chores ⭐</div>`));
   const kids=S.profiles.filter(p=>p.role==='child');
+  if(!S.choresTab)S.choresTab='active';
+
+  // Active / History toggle
+  const seg=el(`<div class="seg" style="margin-bottom:14px">
+    <button data-t="active" class="${S.choresTab==='active'?'sel':''}">${S.isAuthParent?'📋 Active':'📋 To do'}</button>
+    <button data-t="history" class="${S.choresTab==='history'?'sel':''}">📜 History</button></div>`);
+  seg.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.choresTab=b.dataset.t;renderChores();});
+  v.appendChild(seg);
+
+  if(S.choresTab==='history'){
+    renderHistory(v, S.isAuthParent?null:S.me.id, S.isAuthParent);
+    return;
+  }
 
   if(S.isAuthParent){
     const add=el(`<button class="btn" style="margin-bottom:14px">➕ Assign a chore</button>`);
