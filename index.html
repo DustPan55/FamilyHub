@@ -166,6 +166,16 @@
   .bg-preview{height:120px;border-radius:18px;background-size:cover;background-position:center;box-shadow:var(--shadow);margin-bottom:12px;display:flex;align-items:flex-end;padding:10px}
   .bg-preview .tag{background:rgba(0,0,0,.35);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:999px}
   .uploadbtn{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed #c9bff0;border-radius:16px;padding:16px;color:var(--purple);font-weight:800;background:#faf8ff;width:100%}
+
+  /* ---------- journal ---------- */
+  .jentry{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:20px;background:#fff;box-shadow:var(--shadow);margin-bottom:12px;text-align:left;width:100%}
+  .jentry .jmood{font-size:34px;line-height:1;flex:none}
+  .jentry .jdate{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .jentry .jtitle{font-family:'Baloo 2';font-weight:800;font-size:17px;margin-top:1px}
+  .jentry .jbody{color:var(--ink);font-size:14px;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.85}
+  .mood-pick{display:flex;gap:8px;flex-wrap:wrap}
+  .mood-pick button{font-size:28px;width:48px;height:48px;border-radius:14px;background:#faf8ff;border:2px solid transparent}
+  .mood-pick button.sel{border-color:var(--purple);background:#f1edff;transform:scale(1.05)}
 </style>
 </head>
 <body>
@@ -225,6 +235,7 @@
   <div id="viewLists" class="hidden"></div>
   <div id="viewCalendar" class="hidden"></div>
   <div id="viewChores" class="hidden"></div>
+  <div id="viewJournal" class="hidden"></div>
   <div id="viewSettings" class="hidden"></div>
 </div>
 
@@ -235,6 +246,7 @@
     <button data-view="Lists"><span class="ic">✅</span>Lists</button>
     <button data-view="Calendar"><span class="ic">📅</span>Calendar</button>
     <button data-view="Chores"><span class="ic">⭐</span>Chores</button>
+    <button data-view="Journal"><span class="ic">📔</span>Journal</button>
   </div>
 </div>
 
@@ -269,9 +281,10 @@ const BG_GRADS = [["#f5f3ff","#fce7f3"],["#fce7f3","#f3e8ff"],["#e0f2fe","#ccfbf
   ["#fef9c3","#fde68a"],["#312e81","#1e1b4b"],["#0f172a","#1e293b"],["#fafafa","#e5e7eb"]];
 const BG_SOLIDS = ["#f5f3ff","#fce7f3","#e0f2fe","#dcfce7","#fff7ed","#fef9c3","#f3e8ff","#1e1b2e","#0f172a","#ffffff"];
 const ACCENTS = ["#7c3aed","#ec4899","#3b82f6","#06b6d4","#22c55e","#f59e0b","#ef4444","#a855f7","#14b8a6","#fb7185","#6366f1","#0ea5e9"];
+const MOODS = ["😄","🙂","😐","😢","😡","😴","🤩","😍","🥳","😟","🤔","🤒"];
 
 /* ===================== STATE ===================== */
-let S = { profiles:[], lists:[], tasks:[], events:[], me:null, view:"Today",
+let S = { profiles:[], lists:[], tasks:[], events:[], journal:[], me:null, view:"Today",
           calMonth:null, openListId:null, isAuthParent:false };
 
 /* ===================== HELPERS ===================== */
@@ -392,13 +405,14 @@ function show(scr){
 }
 
 async function loadAll(){
-  const [p,l,t,e] = await Promise.all([
+  const [p,l,t,e,j] = await Promise.all([
     sb.from('fam_profiles').select('*').order('sort'),
     sb.from('fam_lists').select('*').order('sort'),
     sb.from('fam_tasks').select('*').order('done').order('due_date',{nullsFirst:true}).order('sort'),
     sb.from('fam_events').select('*').order('start_date'),
+    sb.from('fam_journal').select('*').order('entry_date',{ascending:false}).order('created_at',{ascending:false}),
   ]);
-  S.profiles = p.data||[]; S.lists=l.data||[]; S.tasks=t.data||[]; S.events=e.data||[];
+  S.profiles = p.data||[]; S.lists=l.data||[]; S.tasks=t.data||[]; S.events=e.data||[]; S.journal=j.data||[];
   await rollRecurring();
 }
 
@@ -523,11 +537,12 @@ $("settingsBtn").onclick=()=>{S.view="Settings";setNav();renderView();};
 function setNav(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===S.view));}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{S.view=b.dataset.view;setNav();renderView();});
 function renderView(){
-  ["viewToday","viewLists","viewCalendar","viewChores","viewSettings"].forEach(v=>$(v).classList.add("hidden"));
+  ["viewToday","viewLists","viewCalendar","viewChores","viewJournal","viewSettings"].forEach(v=>$(v).classList.add("hidden"));
   if(S.view==="Today"){$("viewToday").classList.remove("hidden");renderToday();}
   if(S.view==="Lists"){$("viewLists").classList.remove("hidden");renderLists();}
   if(S.view==="Calendar"){$("viewCalendar").classList.remove("hidden");renderCalendar();}
   if(S.view==="Chores"){$("viewChores").classList.remove("hidden");renderChores();}
+  if(S.view==="Journal"){$("viewJournal").classList.remove("hidden");renderJournal();}
   if(S.view==="Settings"){$("viewSettings").classList.remove("hidden");renderSettings();}
 }
 
@@ -799,6 +814,77 @@ function renderChores(){
     v.appendChild(card);
     v.appendChild(el(`<div class="muted center" style="font-weight:700;font-size:13px;margin-top:10px">Ask a parent to add new chores 😊</div>`));
   }
+}
+
+/* ===================== JOURNAL ===================== */
+function renderJournal(){
+  const v=$("viewJournal"); v.innerHTML="";
+  v.appendChild(el(`<div class="viewtitle">My Journal 📔</div>`));
+  v.appendChild(el(`<div class="muted" style="font-weight:700;font-size:13px;margin:-6px 4px 12px">🔒 Private — only you can see your journal</div>`));
+
+  const add=el(`<button class="btn" style="margin-bottom:16px">✍️ New entry</button>`);
+  add.onclick=()=>openJournalModal(null);
+  v.appendChild(add);
+
+  const mine=S.journal.filter(e=>e.profile_id===S.me.id);
+  if(!mine.length){
+    v.appendChild(el(`<div class="empty"><div class="e">📖</div>No entries yet.<br>Write your first one!</div>`));
+    return;
+  }
+  mine.forEach(e=>{
+    const card=el(`<button class="jentry"></button>`);
+    card.innerHTML=`
+      <div class="jmood">${e.mood||'📝'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="jdate">${prettyDate(e.entry_date)}</div>
+        ${e.title?`<div class="jtitle">${esc(e.title)}</div>`:''}
+        ${e.body?`<div class="jbody">${esc(e.body)}</div>`:''}
+      </div>`;
+    card.onclick=()=>openJournalModal(e);
+    v.appendChild(card);
+  });
+}
+
+function openJournalModal(entry){
+  const e=entry||{entry_date:todayStr(),mood:"🙂",title:"",body:""};
+  let mood=e.mood||"🙂";
+  const m=openModal(`
+    <h3>${entry?'📔 Entry':'✍️ New entry'}</h3>
+    <div class="field"><label>Date</label><input id="jDate" type="date" value="${esc(e.entry_date)}"></div>
+    <div class="field"><label>How are you feeling?</label><div class="mood-pick" id="jMood"></div></div>
+    <div class="field"><label>Title (optional)</label><input id="jTitle" placeholder="What's today about?" value="${esc(e.title||'')}"></div>
+    <div class="field"><label>Write it out</label><textarea id="jBody" rows="7" placeholder="Dear journal…">${esc(e.body||'')}</textarea></div>
+    <button class="btn" id="jSave">${entry?'Save changes':'Save entry'}</button>
+    ${entry?`<button class="btn ghost" id="jDel" style="color:var(--red)">🗑️ Delete entry</button>`:''}
+    <button class="btn ghost" id="jCancel">Cancel</button>`);
+  const mp=m.querySelector('#jMood');
+  MOODS.forEach(em=>{const b=el(`<button class="${em===mood?'sel':''}">${em}</button>`);
+    b.onclick=()=>{mood=em;mp.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};mp.appendChild(b);});
+  m.querySelector('#jCancel').onclick=closeModal;
+  m.querySelector('#jSave').onclick=async()=>{
+    const row={entry_date:m.querySelector('#jDate').value||todayStr(),mood,
+      title:m.querySelector('#jTitle').value.trim()||null,
+      body:m.querySelector('#jBody').value.trim(),profile_id:S.me.id};
+    if(!row.body && !row.title)return toast("Write something first 🙂");
+    if(entry){
+      const {error}=await sb.from('fam_journal').update(row).eq('id',entry.id);
+      if(error)return toast(error.message);
+      Object.assign(entry,row);
+    }else{
+      const {data,error}=await sb.from('fam_journal').insert(row).select();
+      if(error)return toast(error.message);
+      S.journal.unshift(data[0]);
+    }
+    S.journal.sort((a,b)=>(b.entry_date.localeCompare(a.entry_date))||((b.created_at||'').localeCompare(a.created_at||'')));
+    closeModal();renderView();toast("Saved 💜");
+  };
+  const del=m.querySelector('#jDel');
+  if(del)del.onclick=async()=>{
+    if(!confirm("Delete this entry?"))return;
+    S.journal=S.journal.filter(x=>x.id!==entry.id);
+    await sb.from('fam_journal').delete().eq('id',entry.id);
+    closeModal();renderView();
+  };
 }
 
 /* ===================== SETTINGS ===================== */
