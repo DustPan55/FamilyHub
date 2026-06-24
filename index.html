@@ -153,9 +153,23 @@
 
   .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:95;box-shadow:var(--shadow);animation:pop .2s}
   @keyframes pop{from{transform:translateX(-50%) scale(.8);opacity:0}}
+
+  /* ---------- theming / settings ---------- */
+  #bgLayer{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;transition:background-image .3s}
+  .theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .theme-card{border-radius:18px;padding:16px 10px;text-align:center;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:15px;border:3px solid transparent;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .theme-card.sel::after{content:"✓";position:absolute;top:6px;right:10px;font-size:16px}
+  .swatch-row{display:flex;gap:10px;flex-wrap:wrap}
+  .swatch{width:44px;height:44px;border-radius:14px;border:3px solid #fff;box-shadow:0 0 0 2px #e5e0f3;position:relative}
+  .swatch.sel{box-shadow:0 0 0 3px var(--ink)}
+  .swatch.sel::after{content:"✓";color:#fff;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+  .bg-preview{height:120px;border-radius:18px;background-size:cover;background-position:center;box-shadow:var(--shadow);margin-bottom:12px;display:flex;align-items:flex-end;padding:10px}
+  .bg-preview .tag{background:rgba(0,0,0,.35);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:999px}
+  .uploadbtn{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed #c9bff0;border-radius:16px;padding:16px;color:var(--purple);font-weight:800;background:#faf8ff;width:100%}
 </style>
 </head>
 <body>
+<div id="bgLayer"></div>
 
 <!-- ============ AUTH ============ -->
 <div id="authScreen" class="screen">
@@ -203,6 +217,7 @@
     </div>
     <div class="spacer"></div>
     <div class="scorechip" id="scoreChip">⭐ <span id="scorePts">0</span></div>
+    <button class="iconbtn" id="settingsBtn" title="Settings">⚙️</button>
     <button class="iconbtn" id="switchBtn" title="Switch person">🔄</button>
   </div>
 
@@ -210,6 +225,7 @@
   <div id="viewLists" class="hidden"></div>
   <div id="viewCalendar" class="hidden"></div>
   <div id="viewChores" class="hidden"></div>
+  <div id="viewSettings" class="hidden"></div>
 </div>
 
 <!-- bottom nav -->
@@ -235,6 +251,25 @@ const AVATARS = ["👧","👦","👩","👨","🧒","👶","🐱","🐶","🦄",
 const COLORS  = ["#7c3aed","#ec4899","#3b82f6","#22c55e","#f59e0b","#14b8a6","#ef4444","#a855f7"];
 const LIST_ICONS = ["📝","🎒","🛒","🎨","⚽","📚","🎮","🎵","🧸","🍪","🌟","🎯","🧹","💖"];
 
+const DEFAULT_THEME = {accent:"#7c3aed",accent2:"#ec4899",bgType:"gradient",grad:["#f5f3ff","#fce7f3"]};
+const PRESETS = [
+  {name:"Purple Dream", accent:"#7c3aed", accent2:"#ec4899", bgType:"gradient", grad:["#f5f3ff","#fce7f3"]},
+  {name:"Bubblegum",    accent:"#ec4899", accent2:"#a855f7", bgType:"gradient", grad:["#fce7f3","#f3e8ff"]},
+  {name:"Ocean",        accent:"#0ea5e9", accent2:"#14b8a6", bgType:"gradient", grad:["#e0f2fe","#ccfbf1"]},
+  {name:"Sky",          accent:"#3b82f6", accent2:"#06b6d4", bgType:"gradient", grad:["#dbeafe","#cffafe"]},
+  {name:"Sunset",       accent:"#f97316", accent2:"#ef4444", bgType:"gradient", grad:["#fff7ed","#fee2e2"]},
+  {name:"Peachy",       accent:"#fb7185", accent2:"#f59e0b", bgType:"gradient", grad:["#ffe4e6","#fff7ed"]},
+  {name:"Mint",         accent:"#22c55e", accent2:"#14b8a6", bgType:"gradient", grad:["#dcfce7","#d1fae5"]},
+  {name:"Grape Soda",   accent:"#a855f7", accent2:"#6366f1", bgType:"gradient", grad:["#ede9fe","#e0e7ff"]},
+  {name:"Midnight",     accent:"#a855f7", accent2:"#3b82f6", bgType:"gradient", grad:["#312e81","#1e1b4b"]},
+  {name:"Strawberry",   accent:"#e11d48", accent2:"#f43f5e", bgType:"gradient", grad:["#fff1f2","#ffe4e6"]},
+];
+const BG_GRADS = [["#f5f3ff","#fce7f3"],["#fce7f3","#f3e8ff"],["#e0f2fe","#ccfbf1"],["#dbeafe","#cffafe"],
+  ["#fff7ed","#fee2e2"],["#ffe4e6","#fff7ed"],["#dcfce7","#d1fae5"],["#ede9fe","#e0e7ff"],
+  ["#fef9c3","#fde68a"],["#312e81","#1e1b4b"],["#0f172a","#1e293b"],["#fafafa","#e5e7eb"]];
+const BG_SOLIDS = ["#f5f3ff","#fce7f3","#e0f2fe","#dcfce7","#fff7ed","#fef9c3","#f3e8ff","#1e1b2e","#0f172a","#ffffff"];
+const ACCENTS = ["#7c3aed","#ec4899","#3b82f6","#06b6d4","#22c55e","#f59e0b","#ef4444","#a855f7","#14b8a6","#fb7185","#6366f1","#0ea5e9"];
+
 /* ===================== STATE ===================== */
 let S = { profiles:[], lists:[], tasks:[], events:[], me:null, view:"Today",
           calMonth:null, openListId:null, isAuthParent:false };
@@ -257,6 +292,59 @@ function confetti(){const em=["🎉","⭐","✨","🎊","💜","🌟","💖"];
   for(let i=0;i<26;i++){const c=el(`<div class="confetti">${em[i%em.length]}</div>`);
     c.style.left=Math.random()*100+"vw";c.style.animationDuration=(1+Math.random()*1.3)+"s";
     c.style.fontSize=(16+Math.random()*18)+"px";document.body.appendChild(c);setTimeout(()=>c.remove(),2400);}}
+
+/* ===================== THEMING ===================== */
+function applyTheme(t){
+  t = t && Object.keys(t).length ? t : DEFAULT_THEME;
+  const root=document.documentElement.style;
+  root.setProperty('--purple', t.accent||DEFAULT_THEME.accent);
+  root.setProperty('--pink',   t.accent2||DEFAULT_THEME.accent2);
+  root.setProperty('--purple2', t.accent||DEFAULT_THEME.accent);
+  const bg=$("bgLayer");
+  if(t.bgType==='image' && t.bgImage){
+    document.body.style.background='transparent';
+    bg.style.backgroundImage=`linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.12)),url('${t.bgImage}')`;
+  } else if(t.bgType==='color' && t.bgColor){
+    document.body.style.background=t.bgColor; bg.style.backgroundImage='none';
+  } else {
+    const g=t.grad||DEFAULT_THEME.grad;
+    document.body.style.background=`linear-gradient(160deg,${g[0]},${g[1]})`; bg.style.backgroundImage='none';
+  }
+}
+function resetTheme(){
+  document.documentElement.style.setProperty('--purple','#7c3aed');
+  document.documentElement.style.setProperty('--pink','#ec4899');
+  document.documentElement.style.setProperty('--purple2','#a855f7');
+  document.body.style.background='linear-gradient(160deg,#f5f3ff,#fce7f3)';
+  $("bgLayer").style.backgroundImage='none';
+}
+async function saveTheme(theme){
+  S.me.theme=theme; applyTheme(theme);
+  const prof=profById(S.me.id); if(prof)prof.theme=theme;
+  await sb.from('fam_profiles').update({theme}).eq('id',S.me.id);
+}
+function resizeImage(file,max,q){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{const img=new Image();
+      img.onload=()=>{let w=img.width,h=img.height;
+        if(w>h && w>max){h=Math.round(h*max/w);w=max;} else if(h>max){w=Math.round(w*max/h);h=max;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',q));};
+      img.onerror=rej; img.src=fr.result;};
+    fr.onerror=rej; fr.readAsDataURL(file);
+  });
+}
+async function uploadBackground(file){
+  const dataUrl=await resizeImage(file,1600,0.82);
+  const blob=await (await fetch(dataUrl)).blob();
+  const {data:{session}}=await sb.auth.getSession();
+  const path=`${session.user.id}/${S.me.id}-${Date.now()}.jpg`;
+  const {error}=await sb.storage.from('family-bg').upload(path,blob,{contentType:'image/jpeg',upsert:true});
+  if(error){toast(error.message);return null;}
+  return sb.storage.from('family-bg').getPublicUrl(path).data.publicUrl;
+}
 
 /* ===================== AUTH ===================== */
 let authMode="login";
@@ -391,7 +479,7 @@ function selectProfile(p){
     S.me=p; S.isAuthParent=false; enterApp();
   }
 }
-function enterApp(){ S.view="Today"; show("app"); setNav(); renderApp(); }
+function enterApp(){ applyTheme(S.me.theme); S.view="Today"; show("app"); setNav(); renderApp(); }
 
 /* PIN entry */
 function askPin(parent, onOk){
@@ -430,15 +518,17 @@ function renderApp(){
   $("scoreChip").style.display = S.me.role==='child' ? 'flex':'none';
   renderView();
 }
-$("switchBtn").onclick=()=>{show("picker");renderPicker();};
+$("switchBtn").onclick=()=>{resetTheme();show("picker");renderPicker();};
+$("settingsBtn").onclick=()=>{S.view="Settings";setNav();renderView();};
 function setNav(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===S.view));}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{S.view=b.dataset.view;setNav();renderView();});
 function renderView(){
-  ["viewToday","viewLists","viewCalendar","viewChores"].forEach(v=>$(v).classList.add("hidden"));
+  ["viewToday","viewLists","viewCalendar","viewChores","viewSettings"].forEach(v=>$(v).classList.add("hidden"));
   if(S.view==="Today"){$("viewToday").classList.remove("hidden");renderToday();}
   if(S.view==="Lists"){$("viewLists").classList.remove("hidden");renderLists();}
   if(S.view==="Calendar"){$("viewCalendar").classList.remove("hidden");renderCalendar();}
   if(S.view==="Chores"){$("viewChores").classList.remove("hidden");renderChores();}
+  if(S.view==="Settings"){$("viewSettings").classList.remove("hidden");renderSettings();}
 }
 
 /* ===================== TASK ROW ===================== */
@@ -709,6 +799,132 @@ function renderChores(){
     v.appendChild(card);
     v.appendChild(el(`<div class="muted center" style="font-weight:700;font-size:13px;margin-top:10px">Ask a parent to add new chores 😊</div>`));
   }
+}
+
+/* ===================== SETTINGS ===================== */
+function renderSettings(){
+  const v=$("viewSettings"); v.innerHTML="";
+  const t=Object.assign({},DEFAULT_THEME,S.me.theme||{});
+
+  const back=el(`<button class="btn ghost" style="width:auto;padding-left:0">‹ Back</button>`);
+  back.onclick=()=>{S.view="Today";setNav();renderView();};
+  v.appendChild(back);
+  v.appendChild(el(`<div class="viewtitle">${S.me.avatar} ${esc(S.me.name)}'s Look</div>`));
+
+  // live preview
+  let prevBg;
+  if(t.bgType==='image'&&t.bgImage)prevBg=`linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.1)),url('${t.bgImage}')`;
+  else if(t.bgType==='color')prevBg=t.bgColor;
+  else prevBg=`linear-gradient(160deg,${(t.grad||DEFAULT_THEME.grad)[0]},${(t.grad||DEFAULT_THEME.grad)[1]})`;
+  v.appendChild(el(`<div class="bg-preview" style="background:${prevBg}"><span class="tag">Preview ✨</span></div>`));
+
+  // ---- one-tap themes ----
+  v.appendChild(el(`<div class="sectionhd">🎨 Quick themes</div>`));
+  const tg=el(`<div class="theme-grid card" style="background:transparent;box-shadow:none;padding:0"></div>`);
+  PRESETS.forEach(p=>{
+    const sel = t.bgType==='gradient' && t.grad && t.grad[0]===p.grad[0] && t.grad[1]===p.grad[1] && t.accent===p.accent;
+    const c=el(`<button class="theme-card ${sel?'sel':''}" style="background:linear-gradient(135deg,${p.accent},${p.accent2})">${p.name}</button>`);
+    c.onclick=()=>saveTheme({accent:p.accent,accent2:p.accent2,bgType:'gradient',grad:p.grad}).then(renderSettings);
+    tg.appendChild(c);
+  });
+  v.appendChild(tg);
+
+  // ---- background ----
+  v.appendChild(el(`<div class="sectionhd">🖼️ Background</div>`));
+  const bgCard=el(`<div class="card"></div>`);
+  const seg=el(`<div class="seg" style="margin-bottom:14px">
+    <button data-b="gradient" class="${t.bgType==='gradient'?'sel':''}">Gradient</button>
+    <button data-b="color" class="${t.bgType==='color'?'sel':''}">Color</button>
+    <button data-b="image" class="${t.bgType==='image'?'sel':''}">Photo</button></div>`);
+  bgCard.appendChild(seg);
+  seg.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{
+    const nt=Object.assign({},t,{bgType:b.dataset.b});
+    if(b.dataset.b==='gradient'&&!nt.grad)nt.grad=DEFAULT_THEME.grad;
+    if(b.dataset.b==='color'&&!nt.bgColor)nt.bgColor=BG_SOLIDS[0];
+    saveTheme(nt).then(renderSettings);
+  });
+
+  if(t.bgType==='gradient'){
+    const row=el(`<div class="swatch-row"></div>`);
+    BG_GRADS.forEach(g=>{const sel=t.grad&&t.grad[0]===g[0]&&t.grad[1]===g[1];
+      const s=el(`<button class="swatch ${sel?'sel':''}" style="background:linear-gradient(135deg,${g[0]},${g[1]})"></button>`);
+      s.onclick=()=>saveTheme(Object.assign({},t,{bgType:'gradient',grad:g})).then(renderSettings);row.appendChild(s);});
+    bgCard.appendChild(row);
+  } else if(t.bgType==='color'){
+    const row=el(`<div class="swatch-row"></div>`);
+    BG_SOLIDS.forEach(col=>{const sel=t.bgColor===col;
+      const s=el(`<button class="swatch ${sel?'sel':''}" style="background:${col}"></button>`);
+      s.onclick=()=>saveTheme(Object.assign({},t,{bgType:'color',bgColor:col})).then(renderSettings);row.appendChild(s);});
+    bgCard.appendChild(row);
+  } else {
+    const up=el(`<label class="uploadbtn">📷 ${t.bgImage?'Choose a different photo':'Upload a photo'}<input type="file" accept="image/*" style="display:none"></label>`);
+    const input=up.querySelector('input');
+    input.onchange=async()=>{
+      if(!input.files[0])return;
+      up.innerHTML="⏳ Uploading…";
+      const url=await uploadBackground(input.files[0]);
+      if(url){await saveTheme(Object.assign({},t,{bgType:'image',bgImage:url}));toast("Background set! 🎉");}
+      renderSettings();
+    };
+    bgCard.appendChild(up);
+    if(t.bgImage){
+      const rm=el(`<button class="btn ghost" style="margin-top:8px">Remove photo</button>`);
+      rm.onclick=()=>saveTheme(Object.assign({},t,{bgType:'gradient',bgImage:null})).then(renderSettings);
+      bgCard.appendChild(rm);
+    }
+  }
+  v.appendChild(bgCard);
+
+  // ---- accent color ----
+  v.appendChild(el(`<div class="sectionhd">🌈 Accent color</div>`));
+  const ac=el(`<div class="card"><div class="swatch-row"></div></div>`);
+  const arow=ac.querySelector('.swatch-row');
+  ACCENTS.forEach(col=>{const sel=t.accent===col;
+    const s=el(`<button class="swatch ${sel?'sel':''}" style="background:${col}"></button>`);
+    s.onclick=()=>saveTheme(Object.assign({},t,{accent:col,accent2:col})).then(renderSettings);arow.appendChild(s);});
+  v.appendChild(ac);
+
+  // ---- profile + account ----
+  v.appendChild(el(`<div class="sectionhd">👤 Profile</div>`));
+  const pc=el(`<div class="card"></div>`);
+  const edit=el(`<button class="btn secondary">✏️ Edit name & avatar</button>`);
+  edit.onclick=()=>openEditProfileModal();
+  pc.appendChild(edit);
+  const reset=el(`<button class="btn ghost" style="margin-top:8px">↩️ Reset to default theme</button>`);
+  reset.onclick=()=>saveTheme(Object.assign({},DEFAULT_THEME)).then(renderSettings);
+  pc.appendChild(reset);
+  v.appendChild(pc);
+
+  if(S.isAuthParent){
+    const fam=el(`<button class="btn secondary" style="margin-top:4px">👨‍👩‍👧 Add family member</button>`);
+    fam.onclick=()=>openProfileModal();
+    v.appendChild(fam);
+  }
+  const out=el(`<button class="btn ghost" style="margin-top:10px;color:var(--red)">Log out</button>`);
+  out.onclick=signOut;
+  v.appendChild(out);
+}
+
+function openEditProfileModal(){
+  let avatar=S.me.avatar,color=S.me.color;
+  const m=openModal(`
+    <h3>✏️ Edit profile</h3>
+    <div class="field"><label>Name</label><input id="epName" value="${esc(S.me.name)}"></div>
+    <div class="field"><label>Avatar</label><div class="emoji-pick" id="epAv"></div></div>
+    <div class="field"><label>Tag color</label><div class="color-pick" id="epCol"></div></div>
+    <button class="btn" id="epSave">Save</button><button class="btn ghost" id="epCancel">Cancel</button>`);
+  const av=m.querySelector('#epAv');
+  AVATARS.forEach(a=>{const b=el(`<button class="${a===avatar?'sel':''}">${a}</button>`);b.onclick=()=>{avatar=a;av.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};av.appendChild(b);});
+  const cp=m.querySelector('#epCol');
+  COLORS.forEach(c=>{const b=el(`<button class="${c===color?'sel':''}" style="background:${c}"></button>`);b.onclick=()=>{color=c;cp.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};cp.appendChild(b);});
+  m.querySelector('#epCancel').onclick=closeModal;
+  m.querySelector('#epSave').onclick=async()=>{
+    const name=m.querySelector('#epName').value.trim();if(!name)return toast("Name can't be empty");
+    S.me.name=name;S.me.avatar=avatar;S.me.color=color;
+    const prof=profById(S.me.id);if(prof){prof.name=name;prof.avatar=avatar;prof.color=color;}
+    await sb.from('fam_profiles').update({name,avatar,color}).eq('id',S.me.id);
+    closeModal();renderApp();renderSettings();
+  };
 }
 
 /* ===================== MODALS ===================== */
