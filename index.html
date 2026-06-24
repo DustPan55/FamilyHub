@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<title>Family Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --purple:#7c3aed; --purple2:#a855f7; --pink:#ec4899; --blue:#3b82f6;
+    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --teal:#14b8a6;
+    --bg:#f5f3ff; --card:#ffffff; --ink:#1e1b2e; --muted:#7c7596;
+    --line:#eceaf5; --shadow:0 8px 24px rgba(124,58,237,.12);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Nunito',system-ui,sans-serif;color:var(--ink);
+    background:linear-gradient(160deg,#f5f3ff,#fce7f3);
+    min-height:100vh;overscroll-behavior:none;
+  }
+  h1,h2,h3,.brand,.big{font-family:'Baloo 2',cursive}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  input,select,textarea{font-family:inherit;font-size:16px}
+  .hidden{display:none!important}
+
+  /* ---------- generic ---------- */
+  .screen{max-width:520px;margin:0 auto;padding:18px;min-height:100vh}
+  .card{background:var(--card);border-radius:22px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--purple);color:#fff;font-weight:800;border-radius:16px;padding:14px 18px;font-size:16px;
+    box-shadow:0 6px 16px rgba(124,58,237,.3);transition:transform .08s,filter .15s;width:100%}
+  .btn:active{transform:scale(.97)}
+  .btn.secondary{background:#f1edff;color:var(--purple);box-shadow:none}
+  .btn.ghost{background:transparent;color:var(--muted);box-shadow:none;font-weight:700}
+  .btn.pink{background:var(--pink);box-shadow:0 6px 16px rgba(236,72,153,.3)}
+  .btn.small{width:auto;padding:9px 14px;font-size:14px;border-radius:12px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-weight:800;font-size:13px;color:var(--muted);margin:0 0 6px 4px;text-transform:uppercase;letter-spacing:.04em}
+  .field input,.field select,.field textarea{
+    width:100%;padding:13px 14px;border:2px solid #ece8f7;border-radius:14px;background:#faf8ff;color:var(--ink);outline:none}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--purple2)}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .muted{color:var(--muted)}
+  .center{text-align:center}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800}
+
+  /* ---------- auth / splash ---------- */
+  #authScreen{display:flex;flex-direction:column;justify-content:center;min-height:100vh}
+  .logo{font-size:62px;text-align:center;line-height:1}
+  .brand{font-size:34px;text-align:center;margin:6px 0 2px;color:var(--purple)}
+  .tagline{text-align:center;color:var(--muted);margin-bottom:22px;font-weight:700}
+  .toggle-link{text-align:center;margin-top:14px;color:var(--purple);font-weight:800}
+  .err{background:#fee2e2;color:#b91c1c;padding:10px 14px;border-radius:12px;font-weight:700;font-size:14px;margin-bottom:12px}
+
+  /* ---------- profile picker ---------- */
+  #pickerScreen{display:flex;flex-direction:column;justify-content:center;min-height:100vh}
+  .who-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  .who{background:var(--card);border-radius:24px;padding:20px 12px;text-align:center;box-shadow:var(--shadow);
+    border:3px solid transparent;transition:transform .1s}
+  .who:active{transform:scale(.95)}
+  .who .av{font-size:50px;line-height:1}
+  .who .nm{font-family:'Baloo 2';font-weight:800;font-size:19px;margin-top:8px}
+  .who .rl{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase}
+
+  /* ---------- app shell ---------- */
+  #app{padding-bottom:90px}
+  .appbar{display:flex;align-items:center;gap:12px;padding:6px 2px 14px}
+  .appbar .me{display:flex;align-items:center;gap:10px}
+  .appbar .me .av{font-size:34px}
+  .appbar .me .hi{font-family:'Baloo 2';font-weight:800;font-size:20px;line-height:1.1}
+  .appbar .me .sub{font-size:12px;color:var(--muted);font-weight:700}
+  .appbar .spacer{flex:1}
+  .scorechip{display:flex;align-items:center;gap:6px;background:#fff;border-radius:999px;padding:7px 12px;box-shadow:var(--shadow);font-weight:800;font-size:14px}
+  .iconbtn{width:42px;height:42px;border-radius:14px;background:#fff;box-shadow:var(--shadow);font-size:18px;display:flex;align-items:center;justify-content:center}
+
+  .nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:transparent;padding:10px;z-index:40}
+  .nav-inner{display:flex;gap:4px;background:#fff;border-radius:22px;box-shadow:0 -2px 24px rgba(124,58,237,.18);padding:6px;max-width:480px;width:100%}
+  .nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:16px;color:var(--muted);font-weight:800;font-size:11px}
+  .nav button .ic{font-size:22px}
+  .nav button.active{background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff}
+
+  .viewtitle{font-family:'Baloo 2';font-size:26px;font-weight:800;margin:2px 4px 12px}
+
+  /* ---------- task / chore rows ---------- */
+  .task{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid #f1eefb}
+  .task:last-child{border-bottom:none}
+  .check{width:30px;height:30px;border-radius:50%;border:3px solid #d9d2f2;flex:none;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;transition:transform .1s}
+  .check:active{transform:scale(.85)}
+  .check.on{background:var(--green);border-color:var(--green)}
+  .task .body{flex:1;min-width:0}
+  .task .ttl{font-weight:800;font-size:16px;line-height:1.2}
+  .task.done .ttl{text-decoration:line-through;color:var(--muted)}
+  .task .meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+  .ptbadge{background:#fff7e6;color:#b45309;font-weight:800;font-size:12px;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .del{color:#d6cfe8;font-size:18px;padding:6px}
+
+  .listcard{display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;background:#fff;box-shadow:var(--shadow);margin-bottom:12px}
+  .listcard .ic{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;flex:none}
+  .listcard .nm{font-family:'Baloo 2';font-weight:800;font-size:18px}
+  .listcard .ct{font-size:13px;color:var(--muted);font-weight:700}
+  .listcard .chev{color:#d6cfe8;font-size:22px}
+
+  .empty{text-align:center;color:var(--muted);font-weight:700;padding:30px 10px}
+  .empty .e{font-size:46px}
+
+  .sectionhd{font-family:'Baloo 2';font-weight:800;font-size:16px;color:var(--purple);margin:18px 6px 6px;display:flex;align-items:center;gap:6px}
+
+  /* ---------- calendar ---------- */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cal-head .mo{font-family:'Baloo 2';font-weight:800;font-size:20px}
+  .cal-nav{width:38px;height:38px;border-radius:12px;background:#f1edff;color:var(--purple);font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-dow{text-align:center;font-size:11px;font-weight:800;color:var(--muted);padding-bottom:4px}
+  .cal-day{aspect-ratio:1;border-radius:13px;background:#faf8ff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:6px;position:relative;font-weight:800;font-size:14px}
+  .cal-day.other{opacity:.32}
+  .cal-day.today{background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff}
+  .cal-day.sel{outline:3px solid var(--purple2)}
+  .dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;justify-content:center;max-width:90%}
+  .dot{width:6px;height:6px;border-radius:50%}
+
+  /* ---------- modal ---------- */
+  .modal-bg{position:fixed;inset:0;background:rgba(30,27,46,.45);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:60;padding:0}
+  .modal{background:#fff;border-radius:26px 26px 0 0;width:100%;max-width:520px;padding:22px 20px 28px;max-height:92vh;overflow:auto;animation:slideup .25s ease}
+  @keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal h3{margin:0 0 16px;font-size:22px}
+  .modal .grabber{width:42px;height:5px;border-radius:3px;background:#e5e0f3;margin:-6px auto 14px}
+  .emoji-pick,.color-pick{display:flex;gap:8px;flex-wrap:wrap}
+  .emoji-pick button{font-size:26px;width:46px;height:46px;border-radius:12px;background:#faf8ff;border:2px solid transparent}
+  .emoji-pick button.sel{border-color:var(--purple);background:#f1edff}
+  .color-pick button{width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px transparent}
+  .color-pick button.sel{box-shadow:0 0 0 3px var(--ink)}
+  .seg{display:flex;background:#f1edff;border-radius:14px;padding:4px;gap:4px}
+  .seg button{flex:1;padding:10px;border-radius:10px;font-weight:800;color:var(--muted)}
+  .seg button.sel{background:#fff;color:var(--purple);box-shadow:var(--shadow)}
+
+  /* PIN pad */
+  .pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;margin:0 auto}
+  .pinpad button{aspect-ratio:1.4;border-radius:16px;background:#faf8ff;font-size:24px;font-weight:800;color:var(--ink);box-shadow:var(--shadow)}
+  .pindots{display:flex;gap:14px;justify-content:center;margin:18px 0}
+  .pindots .pd{width:16px;height:16px;border-radius:50%;background:#e5e0f3}
+  .pindots .pd.on{background:var(--purple)}
+
+  /* confetti */
+  .confetti{position:fixed;top:-10px;font-size:22px;z-index:90;pointer-events:none;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(105vh) rotate(540deg);opacity:.9}}
+
+  .streakbar{height:12px;background:#f1edff;border-radius:999px;overflow:hidden;margin-top:8px}
+  .streakbar>div{height:100%;background:linear-gradient(90deg,var(--amber),var(--pink));border-radius:999px}
+
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;z-index:95;box-shadow:var(--shadow);animation:pop .2s}
+  @keyframes pop{from{transform:translateX(-50%) scale(.8);opacity:0}}
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH ============ -->
+<div id="authScreen" class="screen">
+  <div class="logo">🏡✨</div>
+  <div class="brand">Family Hub</div>
+  <div class="tagline">Lists, calendar & chores — together</div>
+  <div class="card">
+    <div id="authErr" class="err hidden"></div>
+    <div class="field"><label>Family email</label><input id="authEmail" type="email" autocomplete="username" placeholder="family@email.com"></div>
+    <div class="field"><label>Password</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn" id="authBtn">Log in</button>
+    <div class="toggle-link" id="authToggle">New here? Create your family account</div>
+  </div>
+  <p class="muted center" style="font-size:13px;padding:0 20px">One shared family login. Everyone picks who they are after logging in.</p>
+</div>
+
+<!-- ============ SETUP WIZARD ============ -->
+<div id="setupScreen" class="screen hidden">
+  <div class="logo">👋</div>
+  <div class="brand">Welcome!</div>
+  <div class="tagline">Let's add your family members</div>
+  <div id="setupList"></div>
+  <button class="btn secondary" id="addMemberBtn" style="margin-bottom:12px">➕ Add a family member</button>
+  <button class="btn" id="finishSetupBtn">Start using Family Hub →</button>
+</div>
+
+<!-- ============ PROFILE PICKER ============ -->
+<div id="pickerScreen" class="screen hidden">
+  <div class="logo" style="font-size:40px">🏡</div>
+  <div class="brand" style="font-size:26px">Who's here?</div>
+  <div class="tagline">Tap your name</div>
+  <div class="who-grid" id="whoGrid"></div>
+  <button class="btn ghost" id="signOutPicker" style="margin-top:20px">Log out</button>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" class="screen hidden">
+  <div class="appbar">
+    <div class="me" id="meBox">
+      <div class="av" id="meAv">🙂</div>
+      <div>
+        <div class="hi" id="meHi">Hi!</div>
+        <div class="sub" id="meSub">have a great day</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="scorechip" id="scoreChip">⭐ <span id="scorePts">0</span></div>
+    <button class="iconbtn" id="switchBtn" title="Switch person">🔄</button>
+  </div>
+
+  <div id="viewToday"></div>
+  <div id="viewLists" class="hidden"></div>
+  <div id="viewCalendar" class="hidden"></div>
+  <div id="viewChores" class="hidden"></div>
+</div>
+
+<!-- bottom nav -->
+<div class="nav hidden" id="bottomNav">
+  <div class="nav-inner">
+    <button data-view="Today" class="active"><span class="ic">🏠</span>Today</button>
+    <button data-view="Lists"><span class="ic">✅</span>Lists</button>
+    <button data-view="Calendar"><span class="ic">📅</span>Calendar</button>
+    <button data-view="Chores"><span class="ic">⭐</span>Chores</button>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===================== CONFIG ===================== */
+const SUPABASE_URL = "https://xsnjxqruybhxdandcmol.supabase.co";
+const SUPABASE_KEY = "sb_publishable_msOG_LBZ7XNX69w14ksCEQ_sYtmV8yD";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const AVATARS = ["👧","👦","👩","👨","🧒","👶","🐱","🐶","🦄","🐼","🦊","🐰","⭐","🌈","🦁","🐸"];
+const COLORS  = ["#7c3aed","#ec4899","#3b82f6","#22c55e","#f59e0b","#14b8a6","#ef4444","#a855f7"];
+const LIST_ICONS = ["📝","🎒","🛒","🎨","⚽","📚","🎮","🎵","🧸","🍪","🌟","🎯","🧹","💖"];
+
+/* ===================== STATE ===================== */
+let S = { profiles:[], lists:[], tasks:[], events:[], me:null, view:"Today",
+          calMonth:null, openListId:null, isAuthParent:false };
+
+/* ===================== HELPERS ===================== */
+const $ = (id)=>document.getElementById(id);
+const el = (html)=>{const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild;};
+const esc = (s)=>(s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function todayStr(d=new Date()){const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;}
+function addDays(str,n){const [y,m,d]=str.split('-').map(Number);const dt=new Date(y,m-1,d+n);return todayStr(dt);}
+function prettyDate(str){if(!str)return"";const [y,m,d]=str.split('-').map(Number);const dt=new Date(y,m-1,d);
+  const t=todayStr(),tm=addDays(t,1),yd=addDays(t,-1);
+  if(str===t)return"Today";if(str===tm)return"Tomorrow";if(str===yd)return"Yesterday";
+  return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
+function pretty12(time){if(!time)return"";let [h,m]=time.split(':').map(Number);const ap=h<12?'AM':'PM';h=h%12||12;return `${h}:${String(m).padStart(2,'0')} ${ap}`;}
+function profById(id){return S.profiles.find(p=>p.id===id);}
+function toast(msg){const t=el(`<div class="toast">${esc(msg)}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),1600);}
+
+function confetti(){const em=["🎉","⭐","✨","🎊","💜","🌟","💖"];
+  for(let i=0;i<26;i++){const c=el(`<div class="confetti">${em[i%em.length]}</div>`);
+    c.style.left=Math.random()*100+"vw";c.style.animationDuration=(1+Math.random()*1.3)+"s";
+    c.style.fontSize=(16+Math.random()*18)+"px";document.body.appendChild(c);setTimeout(()=>c.remove(),2400);}}
+
+/* ===================== AUTH ===================== */
+let authMode="login";
+$("authToggle").onclick=()=>{
+  authMode = authMode==="login"?"signup":"login";
+  $("authBtn").textContent = authMode==="login"?"Log in":"Create account";
+  $("authToggle").textContent = authMode==="login"?"New here? Create your family account":"Already have an account? Log in";
+  $("authErr").classList.add("hidden");
+};
+$("authBtn").onclick=async()=>{
+  const email=$("authEmail").value.trim(), pass=$("authPass").value;
+  if(!email||!pass){return showAuthErr("Enter an email and password.");}
+  $("authBtn").textContent="…"; $("authBtn").disabled=true;
+  let res;
+  if(authMode==="signup") res=await sb.auth.signUp({email,password:pass});
+  else res=await sb.auth.signInWithPassword({email,password:pass});
+  $("authBtn").disabled=false;
+  $("authBtn").textContent=authMode==="login"?"Log in":"Create account";
+  if(res.error)return showAuthErr(res.error.message);
+  if(authMode==="signup" && !res.data.session){
+    return showAuthErr("Account created! Check your email to confirm, then log in.");
+  }
+  boot();
+};
+function showAuthErr(m){const e=$("authErr");e.textContent=m;e.classList.remove("hidden");}
+
+async function signOut(){await sb.auth.signOut();location.reload();}
+$("signOutPicker").onclick=signOut;
+
+/* ===================== BOOT / ROUTING ===================== */
+async function boot(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){return show("auth");}
+  await loadAll();
+  if(S.profiles.length===0){return startSetup();}
+  show("picker"); renderPicker();
+}
+function show(scr){
+  ["authScreen","setupScreen","pickerScreen","app"].forEach(s=>$(s).classList.add("hidden"));
+  $("bottomNav").classList.add("hidden");
+  if(scr==="auth")$("authScreen").classList.remove("hidden");
+  if(scr==="setup")$("setupScreen").classList.remove("hidden");
+  if(scr==="picker")$("pickerScreen").classList.remove("hidden");
+  if(scr==="app"){$("app").classList.remove("hidden");$("bottomNav").classList.remove("hidden");}
+}
+
+async function loadAll(){
+  const [p,l,t,e] = await Promise.all([
+    sb.from('fam_profiles').select('*').order('sort'),
+    sb.from('fam_lists').select('*').order('sort'),
+    sb.from('fam_tasks').select('*').order('done').order('due_date',{nullsFirst:true}).order('sort'),
+    sb.from('fam_events').select('*').order('start_date'),
+  ]);
+  S.profiles = p.data||[]; S.lists=l.data||[]; S.tasks=t.data||[]; S.events=e.data||[];
+  await rollRecurring();
+}
+
+/* recurring chores: if a recurring chore is done & past, the next copy was already made on completion.
+   This safety pass spawns a fresh copy if a recurring chore is undone but overdue (missed). */
+async function rollRecurring(){ /* next-copy handled at completion time; nothing needed on load */ }
+
+/* ===================== SETUP WIZARD ===================== */
+let setupMembers=[];
+function startSetup(){
+  setupMembers=[
+    {name:"",role:"parent",avatar:"👩",color:COLORS[0],pin:""},
+    {name:"",role:"child",avatar:"👧",color:COLORS[1],pin:""},
+  ];
+  show("setup"); renderSetup();
+}
+$("addMemberBtn").onclick=()=>{setupMembers.push({name:"",role:"child",avatar:AVATARS[setupMembers.length%AVATARS.length],color:COLORS[setupMembers.length%COLORS.length],pin:""});renderSetup();};
+$("finishSetupBtn").onclick=async()=>{
+  const valid=setupMembers.filter(m=>m.name.trim());
+  if(!valid.length)return toast("Add at least one name");
+  if(valid.some(m=>m.role==="parent" && (!m.pin || m.pin.length<4)))return toast("Give each parent a 4-digit PIN");
+  $("finishSetupBtn").textContent="Saving…";
+  const rows=valid.map((m,i)=>({name:m.name.trim(),role:m.role,avatar:m.avatar,color:m.color,pin:m.role==="parent"?m.pin:null,sort:i}));
+  const {error}=await sb.from('fam_profiles').insert(rows);
+  if(error){$("finishSetupBtn").textContent="Start using Family Hub →";return toast(error.message);}
+  await loadAll(); show("picker"); renderPicker();
+};
+function renderSetup(){
+  const wrap=$("setupList"); wrap.innerHTML="";
+  setupMembers.forEach((m,i)=>{
+    const c=el(`<div class="card"></div>`);
+    c.innerHTML=`
+      <div class="row" style="align-items:center;margin-bottom:10px">
+        <div style="flex:0 0 auto;font-size:40px">${m.avatar}</div>
+        <div style="flex:1"><input data-k="name" placeholder="Name" value="${esc(m.name)}" style="width:100%;padding:11px;border:2px solid #ece8f7;border-radius:12px;background:#faf8ff;font-weight:700"></div>
+        ${setupMembers.length>1?`<button data-rm class="del" style="flex:0">✕</button>`:``}
+      </div>
+      <div class="seg" style="margin-bottom:10px">
+        <button data-role="parent" class="${m.role==='parent'?'sel':''}">👩 Parent</button>
+        <button data-role="child" class="${m.role==='child'?'sel':''}">🧒 Kid</button>
+      </div>
+      <div class="emoji-pick" style="margin-bottom:10px"></div>
+      <div class="color-pick" style="margin-bottom:10px"></div>
+      <div class="pinrow ${m.role==='parent'?'':'hidden'}">
+        <label style="font-weight:800;font-size:13px;color:var(--muted)">Parent PIN (4 digits)</label>
+        <input data-k="pin" inputmode="numeric" maxlength="4" placeholder="0000" value="${esc(m.pin)}" style="width:100%;padding:11px;border:2px solid #ece8f7;border-radius:12px;background:#faf8ff;font-weight:700;letter-spacing:6px;text-align:center">
+      </div>`;
+    const ep=c.querySelector('.emoji-pick');
+    AVATARS.forEach(a=>{const b=el(`<button class="${a===m.avatar?'sel':''}">${a}</button>`);b.onclick=()=>{m.avatar=a;renderSetup();};ep.appendChild(b);});
+    const cp=c.querySelector('.color-pick');
+    COLORS.forEach(col=>{const b=el(`<button class="${col===m.color?'sel':''}" style="background:${col}"></button>`);b.onclick=()=>{m.color=col;renderSetup();};cp.appendChild(b);});
+    c.querySelector('[data-k="name"]').oninput=e=>m.name=e.target.value;
+    const pinI=c.querySelector('[data-k="pin"]'); if(pinI)pinI.oninput=e=>m.pin=e.target.value.replace(/\D/g,'');
+    c.querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>{m.role=b.dataset.role;renderSetup();});
+    const rm=c.querySelector('[data-rm]'); if(rm)rm.onclick=()=>{setupMembers.splice(i,1);renderSetup();};
+    wrap.appendChild(c);
+  });
+}
+
+/* ===================== PROFILE PICKER ===================== */
+function renderPicker(){
+  const g=$("whoGrid"); g.innerHTML="";
+  S.profiles.forEach(p=>{
+    const w=el(`<button class="who" style="border-color:${p.color}33">
+      <div class="av">${p.avatar}</div><div class="nm">${esc(p.name)}</div>
+      <div class="rl">${p.role==='parent'?'Parent':'Kid'}</div></button>`);
+    w.onclick=()=>selectProfile(p);
+    g.appendChild(w);
+  });
+  const add=el(`<button class="who" style="border-color:#eee"><div class="av">➕</div><div class="nm" style="font-size:15px">Add person</div></button>`);
+  add.onclick=()=>{ S.isAuthParent=true; openProfileModal(null); };
+  g.appendChild(add);
+}
+function selectProfile(p){
+  if(p.role==='parent'){
+    askPin(p, ()=>{ S.me=p; S.isAuthParent=true; enterApp(); });
+  } else {
+    S.me=p; S.isAuthParent=false; enterApp();
+  }
+}
+function enterApp(){ S.view="Today"; show("app"); setNav(); renderApp(); }
+
+/* PIN entry */
+function askPin(parent, onOk){
+  let entered="";
+  const m=openModal(`
+    <div class="center"><div style="font-size:46px">${parent.avatar}</div>
+    <h3 style="margin:6px 0 0">${esc(parent.name)}'s PIN</h3>
+    <div class="pindots">${'<span class="pd"></span>'.repeat(4)}</div></div>
+    <div class="pinpad"></div>
+    <button class="btn ghost" id="pinCancel" style="margin-top:14px">Cancel</button>`);
+  const dots=m.querySelectorAll('.pd');
+  const pad=m.querySelector('.pinpad');
+  ["1","2","3","4","5","6","7","8","9","","0","⌫"].forEach(k=>{
+    if(k===""){pad.appendChild(el('<div></div>'));return;}
+    const b=el(`<button>${k}</button>`);
+    b.onclick=()=>{
+      if(k==="⌫"){entered=entered.slice(0,-1);}
+      else if(entered.length<4){entered+=k;}
+      dots.forEach((d,i)=>d.classList.toggle('on',i<entered.length));
+      if(entered.length===4){
+        if(entered===parent.pin){closeModal();onOk();}
+        else{toast("Wrong PIN");entered="";dots.forEach(d=>d.classList.remove('on'));}
+      }
+    };
+    pad.appendChild(b);
+  });
+  m.querySelector('#pinCancel').onclick=closeModal;
+}
+
+/* ===================== APP HEADER & NAV ===================== */
+function renderApp(){
+  $("meAv").textContent=S.me.avatar;
+  $("meHi").textContent=`Hi, ${S.me.name}!`;
+  $("meSub").textContent=S.isAuthParent?"Parent mode 🔓":"have an awesome day";
+  $("scorePts").textContent=S.me.points||0;
+  $("scoreChip").style.display = S.me.role==='child' ? 'flex':'none';
+  renderView();
+}
+$("switchBtn").onclick=()=>{show("picker");renderPicker();};
+function setNav(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===S.view));}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{S.view=b.dataset.view;setNav();renderView();});
+function renderView(){
+  ["viewToday","viewLists","viewCalendar","viewChores"].forEach(v=>$(v).classList.add("hidden"));
+  if(S.view==="Today"){$("viewToday").classList.remove("hidden");renderToday();}
+  if(S.view==="Lists"){$("viewLists").classList.remove("hidden");renderLists();}
+  if(S.view==="Calendar"){$("viewCalendar").classList.remove("hidden");renderCalendar();}
+  if(S.view==="Chores"){$("viewChores").classList.remove("hidden");renderChores();}
+}
+
+/* ===================== TASK ROW ===================== */
+function taskRow(t,opts={}){
+  const p=profById(t.assigned_to);
+  const r=el(`<div class="task ${t.done?'done':''}"></div>`);
+  const meta=[];
+  if(t.due_date)meta.push(`📅 ${prettyDate(t.due_date)}`);
+  if(t.due_time)meta.push(`🕐 ${pretty12(t.due_time)}`);
+  if(opts.showWho&&p)meta.push(`${p.avatar} ${esc(p.name)}`);
+  if(t.recurrence)meta.push(`🔁 ${t.recurrence}`);
+  r.innerHTML=`
+    <div class="check ${t.done?'on':''}">${t.done?'✓':''}</div>
+    <div class="body"><div class="ttl">${esc(t.title)}</div>
+    ${meta.length?`<div class="meta">${meta.join('')}</div>`:''}</div>
+    ${t.is_chore&&t.points?`<div class="ptbadge">+${t.points}⭐</div>`:''}
+    ${opts.canDelete?`<button class="del">🗑️</button>`:''}`;
+  r.querySelector('.check').onclick=()=>toggleTask(t);
+  const d=r.querySelector('.del'); if(d)d.onclick=(e)=>{e.stopPropagation();deleteTask(t);};
+  return r;
+}
+
+async function toggleTask(t){
+  const now=!t.done;
+  const isChildChore = t.is_chore && t.points>0 && t.assigned_to;
+  // optimistic
+  t.done=now; t.done_at=now?new Date().toISOString():null;
+  renderView();
+  await sb.from('fam_tasks').update({done:now,done_at:t.done_at}).eq('id',t.id);
+
+  if(isChildChore){
+    const prof=profById(t.assigned_to);
+    if(prof){
+      prof.points=Math.max(0,(prof.points||0)+(now?t.points:-t.points));
+      await sb.from('fam_profiles').update({points:prof.points}).eq('id',prof.id);
+      if(S.me && S.me.id===prof.id)$("scorePts").textContent=prof.points;
+    }
+  }
+  if(now){
+    confetti();
+    if(isChildChore)toast(`+${t.points}⭐ Nice work!`);
+    // spawn next occurrence for recurring chores
+    if(t.recurrence && t.due_date){
+      const next=addDays(t.due_date,t.recurrence==='weekly'?7:1);
+      const copy={list_id:t.list_id,title:t.title,notes:t.notes,due_date:next,due_time:t.due_time,
+        is_chore:t.is_chore,assigned_to:t.assigned_to,points:t.points,recurrence:t.recurrence,created_by:t.created_by,sort:t.sort};
+      const {data}=await sb.from('fam_tasks').insert(copy).select();
+      if(data&&data[0])S.tasks.push(data[0]);
+    }
+  }
+  renderView();
+}
+async function deleteTask(t){
+  if(!confirm(`Delete "${t.title}"?`))return;
+  S.tasks=S.tasks.filter(x=>x.id!==t.id);renderView();
+  await sb.from('fam_tasks').delete().eq('id',t.id);
+}
+
+/* ===================== TODAY ===================== */
+function renderToday(){
+  const v=$("viewToday"); v.innerHTML="";
+  const t=todayStr();
+  v.appendChild(el(`<div class="viewtitle">${greeting()} ${S.me.avatar}</div>`));
+
+  if(S.me.role==='child'){
+    const streak=calcStreak(S.me.id);
+    const card=el(`<div class="card" style="background:linear-gradient(135deg,#fff,#fdf2f8)">
+      <div style="display:flex;justify-content:space-around;text-align:center">
+        <div><div class="big" style="font-size:30px;font-weight:800">⭐ ${S.me.points||0}</div><div class="muted" style="font-weight:800;font-size:12px">POINTS</div></div>
+        <div><div class="big" style="font-size:30px;font-weight:800">🔥 ${streak}</div><div class="muted" style="font-weight:800;font-size:12px">DAY STREAK</div></div>
+      </div>
+      <div class="streakbar"><div style="width:${Math.min(100,(S.me.points||0)%100)}%"></div></div>
+      <div class="muted center" style="font-weight:700;font-size:12px;margin-top:6px">${100-((S.me.points||0)%100)} ⭐ to your next reward!</div>
+    </div>`);
+    v.appendChild(card);
+  }
+
+  // My chores due today / overdue
+  const myChores=S.tasks.filter(x=>x.is_chore && x.assigned_to===S.me.id && (!x.due_date || x.due_date<=t || x.done) )
+                        .filter(x=> x.done? x.due_date===t : true);
+  const choresOpen=myChores.filter(x=>!x.done);
+  const choresDone=myChores.filter(x=>x.done && x.done_at && x.done_at.slice(0,10)===t);
+  v.appendChild(el(`<div class="sectionhd">⭐ My chores today</div>`));
+  const cc=el(`<div class="card"></div>`);
+  if(!choresOpen.length&&!choresDone.length)cc.appendChild(el(`<div class="empty"><div class="e">🎈</div>No chores today!</div>`));
+  choresOpen.forEach(x=>cc.appendChild(taskRow(x)));
+  choresDone.forEach(x=>cc.appendChild(taskRow(x)));
+  v.appendChild(cc);
+
+  // Today's events
+  const evs=visibleEvents().filter(e=> e.start_date<=t && (e.end_date||e.start_date)>=t)
+            .sort((a,b)=>(a.all_day?'':a.start_time||'').localeCompare(b.all_day?'':b.start_time||''));
+  v.appendChild(el(`<div class="sectionhd">📅 Today's schedule</div>`));
+  const ec=el(`<div class="card"></div>`);
+  if(!evs.length)ec.appendChild(el(`<div class="empty"><div class="e">☀️</div>Nothing scheduled</div>`));
+  evs.forEach(e=>ec.appendChild(eventRow(e)));
+  v.appendChild(ec);
+
+  // Tasks due today (non-chore)
+  const due=S.tasks.filter(x=>!x.is_chore && !x.done && x.due_date===t && visibleList(x.list_id));
+  if(due.length){
+    v.appendChild(el(`<div class="sectionhd">✅ To-dos due today</div>`));
+    const dc=el(`<div class="card"></div>`);
+    due.forEach(x=>dc.appendChild(taskRow(x)));
+    v.appendChild(dc);
+  }
+}
+function greeting(){const h=new Date().getHours();return h<12?"Good morning,":h<18?"Hi there,":"Good evening,";}
+
+function calcStreak(profileId){
+  const days=new Set(S.tasks.filter(x=>x.is_chore&&x.assigned_to===profileId&&x.done&&x.done_at)
+                .map(x=>x.done_at.slice(0,10)));
+  let streak=0,cur=todayStr();
+  if(!days.has(cur))cur=addDays(cur,-1); // allow today not done yet
+  while(days.has(cur)){streak++;cur=addDays(cur,-1);}
+  return streak;
+}
+
+/* ===================== LISTS ===================== */
+function visibleList(listId){
+  if(!listId)return true;
+  const l=S.lists.find(x=>x.id===listId);if(!l)return false;
+  return !l.profile_id || l.profile_id===S.me.id || S.isAuthParent;
+}
+function renderLists(){
+  const v=$("viewLists"); v.innerHTML="";
+  if(S.openListId){return renderListDetail();}
+  v.appendChild(el(`<div class="viewtitle">My Lists</div>`));
+  const mine=S.lists.filter(l=>!l.profile_id || l.profile_id===S.me.id || S.isAuthParent);
+  if(!mine.length)v.appendChild(el(`<div class="empty"><div class="e">📋</div>No lists yet.<br>Make your first one!</div>`));
+  mine.forEach(l=>{
+    const open=S.tasks.filter(t=>t.list_id===l.id&&!t.done).length;
+    const c=el(`<button class="listcard" style="width:100%;text-align:left">
+      <div class="ic" style="background:${l.color}">${l.icon}</div>
+      <div style="flex:1"><div class="nm">${esc(l.name)}</div>
+      <div class="ct">${open} open · ${profById(l.profile_id)?profById(l.profile_id).name:'Everyone'}</div></div>
+      <div class="chev">›</div></button>`);
+    c.onclick=()=>{S.openListId=l.id;renderListDetail();};
+    v.appendChild(c);
+  });
+  const add=el(`<button class="btn secondary" style="margin-top:6px">➕ New list</button>`);
+  add.onclick=()=>openListModal();
+  v.appendChild(add);
+}
+function renderListDetail(){
+  const v=$("viewLists"); v.innerHTML="";
+  const l=S.lists.find(x=>x.id===S.openListId);
+  if(!l){S.openListId=null;return renderLists();}
+  const back=el(`<button class="btn ghost" style="width:auto;padding-left:0">‹ All lists</button>`);
+  back.onclick=()=>{S.openListId=null;renderLists();};
+  v.appendChild(back);
+  const hd=el(`<div style="display:flex;align-items:center;gap:12px;margin:4px 4px 12px">
+     <div class="ic" style="background:${l.color};width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:24px">${l.icon}</div>
+     <div class="viewtitle" style="margin:0">${esc(l.name)}</div></div>`);
+  v.appendChild(hd);
+
+  const tasks=S.tasks.filter(t=>t.list_id===l.id);
+  const open=tasks.filter(t=>!t.done), done=tasks.filter(t=>t.done);
+  const card=el(`<div class="card"></div>`);
+  if(!tasks.length)card.appendChild(el(`<div class="empty"><div class="e">✨</div>Add your first item!</div>`));
+  open.forEach(t=>card.appendChild(taskRow(t,{canDelete:true})));
+  if(done.length){card.appendChild(el(`<div class="muted" style="font-weight:800;font-size:12px;margin:12px 6px 2px">DONE</div>`));
+    done.forEach(t=>card.appendChild(taskRow(t,{canDelete:true})));}
+  v.appendChild(card);
+
+  const add=el(`<button class="btn">➕ Add to list</button>`);
+  add.onclick=()=>openTaskModal({list_id:l.id});
+  v.appendChild(add);
+
+  if(S.isAuthParent){
+    const del=el(`<button class="btn ghost" style="margin-top:8px">🗑️ Delete this list</button>`);
+    del.onclick=async()=>{if(confirm("Delete this list and its items?")){
+      S.lists=S.lists.filter(x=>x.id!==l.id);S.openListId=null;
+      await sb.from('fam_lists').delete().eq('id',l.id);renderLists();}};
+    v.appendChild(del);
+  }
+}
+
+/* ===================== CALENDAR ===================== */
+function visibleEvents(){return S.events.filter(e=>!e.profile_id||e.profile_id===S.me.id||S.isAuthParent);}
+function renderCalendar(){
+  const v=$("viewCalendar"); v.innerHTML="";
+  if(!S.calMonth){const n=new Date();S.calMonth={y:n.getFullYear(),m:n.getMonth(),sel:todayStr()};}
+  const {y,m}=S.calMonth;
+  const head=el(`<div class="cal-head">
+    <button class="cal-nav" id="pm">‹</button>
+    <div class="mo">${new Date(y,m,1).toLocaleDateString(undefined,{month:'long',year:'numeric'})}</div>
+    <button class="cal-nav" id="nm">›</button></div>`);
+  v.appendChild(head);
+  head.querySelector('#pm').onclick=()=>{S.calMonth.m--;if(S.calMonth.m<0){S.calMonth.m=11;S.calMonth.y--;}renderCalendar();};
+  head.querySelector('#nm').onclick=()=>{S.calMonth.m++;if(S.calMonth.m>11){S.calMonth.m=0;S.calMonth.y++;}renderCalendar();};
+
+  const grid=el(`<div class="cal-grid"></div>`);
+  ["S","M","T","W","T","F","S"].forEach(d=>grid.appendChild(el(`<div class="cal-dow">${d}</div>`)));
+  const first=new Date(y,m,1).getDay();
+  const dim=new Date(y,m+1,0).getDate();
+  const prevDim=new Date(y,m,0).getDate();
+  const evs=visibleEvents();
+  for(let i=0;i<42;i++){
+    let day,mon=m,yr=y,other=false;
+    if(i<first){day=prevDim-first+1+i;mon=m-1;other=true;}
+    else if(i>=first+dim){day=i-first-dim+1;mon=m+1;other=true;}
+    else day=i-first+1;
+    let dd=new Date(yr,mon,day);const ds=todayStr(dd);
+    const dayEvs=evs.filter(e=>ds>=e.start_date && ds<=(e.end_date||e.start_date));
+    const cell=el(`<button class="cal-day ${other?'other':''} ${ds===todayStr()?'today':''} ${ds===S.calMonth.sel?'sel':''}">
+      ${day}<div class="dots">${dayEvs.slice(0,4).map(e=>`<span class="dot" style="background:${e.color}"></span>`).join('')}</div></button>`);
+    cell.onclick=()=>{S.calMonth.sel=ds;renderCalendar();};
+    grid.appendChild(cell);
+  }
+  v.appendChild(grid);
+
+  // selected day list
+  const sel=S.calMonth.sel;
+  v.appendChild(el(`<div class="sectionhd">📅 ${prettyDate(sel)}</div>`));
+  const dayEvs=evs.filter(e=>sel>=e.start_date && sel<=(e.end_date||e.start_date))
+              .sort((a,b)=>(a.all_day?'':a.start_time||'').localeCompare(b.all_day?'':b.start_time||''));
+  const card=el(`<div class="card"></div>`);
+  if(!dayEvs.length)card.appendChild(el(`<div class="empty"><div class="e">🗓️</div>Nothing planned</div>`));
+  dayEvs.forEach(e=>card.appendChild(eventRow(e,true)));
+  v.appendChild(card);
+  const add=el(`<button class="btn">➕ Add to calendar</button>`);
+  add.onclick=()=>openEventModal({start_date:sel});
+  v.appendChild(add);
+}
+function eventRow(e,canDelete){
+  const p=profById(e.profile_id);
+  const r=el(`<div class="task"></div>`);
+  const meta=[];
+  if(e.all_day)meta.push("All day");
+  else if(e.start_time)meta.push(`🕐 ${pretty12(e.start_time)}${e.end_time?' – '+pretty12(e.end_time):''}`);
+  if(p)meta.push(`${p.avatar} ${esc(p.name)}`);
+  r.innerHTML=`<div style="width:8px;height:38px;border-radius:6px;background:${e.color};flex:none"></div>
+    <div class="body"><div class="ttl">${esc(e.title)}</div>
+    ${meta.length?`<div class="meta">${meta.join('')}</div>`:''}
+    ${e.notes?`<div class="meta">${esc(e.notes)}</div>`:''}</div>
+    ${canDelete?`<button class="del">🗑️</button>`:''}`;
+  const d=r.querySelector('.del');
+  if(d)d.onclick=async()=>{if(confirm("Delete this event?")){S.events=S.events.filter(x=>x.id!==e.id);renderView();await sb.from('fam_events').delete().eq('id',e.id);}};
+  return r;
+}
+
+/* ===================== CHORES ===================== */
+function renderChores(){
+  const v=$("viewChores"); v.innerHTML="";
+  v.appendChild(el(`<div class="viewtitle">Chores ⭐</div>`));
+  const kids=S.profiles.filter(p=>p.role==='child');
+
+  if(S.isAuthParent){
+    const add=el(`<button class="btn" style="margin-bottom:14px">➕ Assign a chore</button>`);
+    add.onclick=()=>openTaskModal({is_chore:true,points:5,due_date:todayStr()});
+    v.appendChild(add);
+    kids.forEach(k=>{
+      v.appendChild(el(`<div class="sectionhd">${k.avatar} ${esc(k.name)} · ⭐ ${k.points||0} · 🔥 ${calcStreak(k.id)}</div>`));
+      const card=el(`<div class="card"></div>`);
+      const ch=S.tasks.filter(t=>t.is_chore&&t.assigned_to===k.id).filter(t=>!t.done|| (t.done_at&&t.done_at.slice(0,10)===todayStr()));
+      if(!ch.length)card.appendChild(el(`<div class="empty" style="padding:18px"><div class="e" style="font-size:32px">🧹</div>No chores assigned</div>`));
+      ch.forEach(t=>card.appendChild(taskRow(t,{canDelete:true})));
+      v.appendChild(card);
+    });
+  } else {
+    // child view: my chores
+    v.appendChild(el(`<div class="sectionhd">My chores</div>`));
+    const card=el(`<div class="card"></div>`);
+    const ch=S.tasks.filter(t=>t.is_chore&&t.assigned_to===S.me.id).filter(t=>!t.done||(t.done_at&&t.done_at.slice(0,10)===todayStr()));
+    if(!ch.length)card.appendChild(el(`<div class="empty"><div class="e">🎉</div>All done — you rock!</div>`));
+    ch.forEach(t=>card.appendChild(taskRow(t)));
+    v.appendChild(card);
+    v.appendChild(el(`<div class="muted center" style="font-weight:700;font-size:13px;margin-top:10px">Ask a parent to add new chores 😊</div>`));
+  }
+}
+
+/* ===================== MODALS ===================== */
+function openModal(html){
+  const bg=el(`<div class="modal-bg"><div class="modal"><div class="grabber"></div>${html}</div></div>`);
+  bg.onclick=(e)=>{if(e.target===bg)closeModal();};
+  $("modalRoot").innerHTML=""; $("modalRoot").appendChild(bg);
+  return bg.querySelector('.modal');
+}
+function closeModal(){$("modalRoot").innerHTML="";}
+
+/* --- task / chore modal --- */
+function openTaskModal(init={}){
+  const t=Object.assign({title:"",notes:"",due_date:"",due_time:"",is_chore:false,points:5,assigned_to:"",recurrence:"",list_id:null},init);
+  const kids=S.profiles.filter(p=>p.role==='child');
+  const lists=S.lists.filter(l=>!l.profile_id||l.profile_id===S.me.id||S.isAuthParent);
+  const m=openModal(`
+    <h3>${t.is_chore?'⭐ New chore':'✅ New to-do'}</h3>
+    <div class="field"><label>What needs doing?</label><input id="tTitle" placeholder="${t.is_chore?'e.g. Make your bed':'e.g. Pack lunch'}" value="${esc(t.title)}"></div>
+    ${t.is_chore?`
+      <div class="field"><label>Who's it for?</label><select id="tWho">${kids.map(k=>`<option value="${k.id}" ${k.id===t.assigned_to?'selected':''}>${k.avatar} ${esc(k.name)}</option>`).join('')}</select></div>
+      <div class="row">
+        <div class="field"><label>Points ⭐</label><select id="tPts">${[1,2,3,5,10,15,20,25].map(n=>`<option ${n===t.points?'selected':''}>${n}</option>`).join('')}</select></div>
+        <div class="field"><label>Repeat</label><select id="tRep"><option value="">Once</option><option value="daily" ${t.recurrence==='daily'?'selected':''}>Daily</option><option value="weekly" ${t.recurrence==='weekly'?'selected':''}>Weekly</option></select></div>
+      </div>`:`
+      ${lists.length?`<div class="field"><label>List</label><select id="tList"><option value="">— none —</option>${lists.map(l=>`<option value="${l.id}" ${l.id===t.list_id?'selected':''}>${l.icon} ${esc(l.name)}</option>`).join('')}</select></div>`:''}`}
+    <div class="row">
+      <div class="field"><label>Date</label><input id="tDate" type="date" value="${esc(t.due_date)}"></div>
+      <div class="field"><label>Time</label><input id="tTime" type="time" value="${esc(t.due_time)}"></div>
+    </div>
+    <button class="btn" id="tSave">Save</button>
+    <button class="btn ghost" id="tCancel">Cancel</button>`);
+  m.querySelector('#tCancel').onclick=closeModal;
+  m.querySelector('#tSave').onclick=async()=>{
+    const title=m.querySelector('#tTitle').value.trim(); if(!title)return toast("Add a title");
+    const row={title,
+      due_date:m.querySelector('#tDate').value||null,
+      due_time:m.querySelector('#tTime').value||null,
+      is_chore:!!t.is_chore, created_by:S.me.id,
+      list_id: t.is_chore? null : (m.querySelector('#tList')?m.querySelector('#tList').value||null:t.list_id),
+      assigned_to: t.is_chore? m.querySelector('#tWho').value : null,
+      points: t.is_chore? parseInt(m.querySelector('#tPts').value):0,
+      recurrence: t.is_chore? (m.querySelector('#tRep').value||null):null };
+    const {data,error}=await sb.from('fam_tasks').insert(row).select();
+    if(error)return toast(error.message);
+    S.tasks.push(data[0]); closeModal(); renderView();
+    if(t.is_chore)toast("Chore assigned! ⭐");
+  };
+}
+
+/* --- list modal --- */
+function openListModal(){
+  let icon=LIST_ICONS[0],color=COLORS[0],owner=S.isAuthParent?"":S.me.id;
+  const kids=S.profiles;
+  const m=openModal(`
+    <h3>📋 New list</h3>
+    <div class="field"><label>List name</label><input id="lName" placeholder="e.g. Homework, Groceries"></div>
+    <div class="field"><label>Icon</label><div class="emoji-pick" id="lIcons"></div></div>
+    <div class="field"><label>Color</label><div class="color-pick" id="lColors"></div></div>
+    <div class="field"><label>Who's it for?</label><select id="lWho"><option value="">👨‍👩‍👧 Everyone</option>${kids.map(p=>`<option value="${p.id}" ${p.id===owner?'selected':''}>${p.avatar} ${esc(p.name)}</option>`).join('')}</select></div>
+    <button class="btn" id="lSave">Create list</button>
+    <button class="btn ghost" id="lCancel">Cancel</button>`);
+  const ip=m.querySelector('#lIcons');
+  LIST_ICONS.forEach(ic=>{const b=el(`<button class="${ic===icon?'sel':''}">${ic}</button>`);b.onclick=()=>{icon=ic;ip.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};ip.appendChild(b);});
+  const cp=m.querySelector('#lColors');
+  COLORS.forEach(c=>{const b=el(`<button class="${c===color?'sel':''}" style="background:${c}"></button>`);b.onclick=()=>{color=c;cp.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};cp.appendChild(b);});
+  m.querySelector('#lCancel').onclick=closeModal;
+  m.querySelector('#lSave').onclick=async()=>{
+    const name=m.querySelector('#lName').value.trim();if(!name)return toast("Name your list");
+    const row={name,icon,color,profile_id:m.querySelector('#lWho').value||null,sort:S.lists.length};
+    const {data,error}=await sb.from('fam_lists').insert(row).select();
+    if(error)return toast(error.message);
+    S.lists.push(data[0]);closeModal();S.openListId=data[0].id;renderView();
+  };
+}
+
+/* --- event modal --- */
+function openEventModal(init={}){
+  const e=Object.assign({title:"",notes:"",start_date:todayStr(),start_time:"",end_time:"",all_day:false,color:COLORS[0],profile_id:S.me.role==='child'?S.me.id:""},init);
+  let color=e.color, allday=e.all_day;
+  const m=openModal(`
+    <h3>📅 New event</h3>
+    <div class="field"><label>What's happening?</label><input id="eTitle" placeholder="e.g. Soccer practice" value="${esc(e.title)}"></div>
+    <div class="field"><label>Date</label><input id="eDate" type="date" value="${esc(e.start_date)}"></div>
+    <div class="seg" style="margin-bottom:12px"><button id="timed" class="${!allday?'sel':''}">🕐 At a time</button><button id="allday" class="${allday?'sel':''}">All day</button></div>
+    <div class="row" id="timeRow" ${allday?'style="display:none"':''}>
+      <div class="field"><label>Start</label><input id="eStart" type="time" value="${esc(e.start_time)}"></div>
+      <div class="field"><label>End</label><input id="eEnd" type="time" value="${esc(e.end_time)}"></div>
+    </div>
+    <div class="field"><label>Whose calendar?</label><select id="eWho"><option value="">👨‍👩‍👧 Family</option>${S.profiles.map(p=>`<option value="${p.id}" ${p.id===e.profile_id?'selected':''}>${p.avatar} ${esc(p.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Color</label><div class="color-pick" id="eColors"></div></div>
+    <div class="field"><label>Notes (optional)</label><input id="eNotes" placeholder="anything to remember" value="${esc(e.notes)}"></div>
+    <button class="btn" id="eSave">Save event</button>
+    <button class="btn ghost" id="eCancel">Cancel</button>`);
+  const cp=m.querySelector('#eColors');
+  COLORS.forEach(c=>{const b=el(`<button class="${c===color?'sel':''}" style="background:${c}"></button>`);b.onclick=()=>{color=c;cp.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};cp.appendChild(b);});
+  m.querySelector('#timed').onclick=()=>{allday=false;m.querySelector('#timed').classList.add('sel');m.querySelector('#allday').classList.remove('sel');m.querySelector('#timeRow').style.display='flex';};
+  m.querySelector('#allday').onclick=()=>{allday=true;m.querySelector('#allday').classList.add('sel');m.querySelector('#timed').classList.remove('sel');m.querySelector('#timeRow').style.display='none';};
+  m.querySelector('#eCancel').onclick=closeModal;
+  m.querySelector('#eSave').onclick=async()=>{
+    const title=m.querySelector('#eTitle').value.trim();if(!title)return toast("Add a title");
+    const row={title,notes:m.querySelector('#eNotes').value.trim()||null,
+      start_date:m.querySelector('#eDate').value,all_day:allday,
+      start_time:allday?null:(m.querySelector('#eStart').value||null),
+      end_time:allday?null:(m.querySelector('#eEnd').value||null),
+      color,profile_id:m.querySelector('#eWho').value||null,created_by:S.me.id};
+    const {data,error}=await sb.from('fam_events').insert(row).select();
+    if(error)return toast(error.message);
+    S.events.push(data[0]);closeModal();renderView();
+  };
+}
+
+/* --- add profile (from picker, parent only) --- */
+function openProfileModal(){
+  let avatar="🧒",color=COLORS[2],role="child",pin="";
+  const m=openModal(`
+    <h3>➕ Add family member</h3>
+    <div class="field"><label>Name</label><input id="pName" placeholder="Name"></div>
+    <div class="seg" style="margin-bottom:12px"><button id="rP">👩 Parent</button><button id="rC" class="sel">🧒 Kid</button></div>
+    <div class="field"><label>Avatar</label><div class="emoji-pick" id="pAv"></div></div>
+    <div class="field"><label>Color</label><div class="color-pick" id="pCol"></div></div>
+    <div class="field hidden" id="pPinWrap"><label>Parent PIN (4 digits)</label><input id="pPin" inputmode="numeric" maxlength="4" placeholder="0000" style="letter-spacing:6px;text-align:center"></div>
+    <button class="btn" id="pSave">Add</button><button class="btn ghost" id="pCancel">Cancel</button>`);
+  const av=m.querySelector('#pAv');
+  AVATARS.forEach(a=>{const b=el(`<button class="${a===avatar?'sel':''}">${a}</button>`);b.onclick=()=>{avatar=a;av.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};av.appendChild(b);});
+  const cp=m.querySelector('#pCol');
+  COLORS.forEach(c=>{const b=el(`<button class="${c===color?'sel':''}" style="background:${c}"></button>`);b.onclick=()=>{color=c;cp.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};cp.appendChild(b);});
+  m.querySelector('#rP').onclick=()=>{role="parent";m.querySelector('#rP').classList.add('sel');m.querySelector('#rC').classList.remove('sel');m.querySelector('#pPinWrap').classList.remove('hidden');};
+  m.querySelector('#rC').onclick=()=>{role="child";m.querySelector('#rC').classList.add('sel');m.querySelector('#rP').classList.remove('sel');m.querySelector('#pPinWrap').classList.add('hidden');};
+  m.querySelector('#pCancel').onclick=closeModal;
+  m.querySelector('#pSave').onclick=async()=>{
+    const name=m.querySelector('#pName').value.trim();if(!name)return toast("Add a name");
+    if(role==='parent'){pin=m.querySelector('#pPin').value;if(pin.length<4)return toast("4-digit PIN needed");}
+    const row={name,role,avatar,color,pin:role==='parent'?pin:null,sort:S.profiles.length};
+    const {data,error}=await sb.from('fam_profiles').insert(row).select();
+    if(error)return toast(error.message);
+    S.profiles.push(data[0]);closeModal();renderPicker();
+  };
+}
+
+/* ===================== GO ===================== */
+boot();
+</script>
+</body>
+</html>
